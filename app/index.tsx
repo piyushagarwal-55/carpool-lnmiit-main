@@ -23,15 +23,7 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
-import {
-  Home,
-  Bus,
-  User,
-  Bell,
-  Moon,
-  Sun,
-  Settings,
-} from "lucide-react-native";
+import { Chrome as Home, Bus, User, Bell, Moon, Sun, Settings } from "lucide-react-native";
 
 // Import new components
 import LoadingScreen from "./components/LoadingScreen";
