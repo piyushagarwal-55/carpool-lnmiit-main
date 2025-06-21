@@ -39,6 +39,7 @@ import ModernAuthScreen from "./components/ModernAuthScreen";
 import UberStyleHome from "./components/UberStyleHome";
 import BusBookingSystem from "./components/BusBookingSystem";
 import UserProfileSafety from "./components/UserProfileSafety";
+import { authAPI } from "./api/auth";
 
 // Custom theme colors - Pure Black & White
 const lightTheme = {
@@ -81,25 +82,6 @@ const darkTheme = {
   },
 };
 
-// Demo credentials for easy access
-const DEMO_CREDENTIALS = {
-  demo: {
-    email: "demo@lnmiit.ac.in",
-    password: "demo123",
-    role: "passenger" as const,
-  },
-  student: {
-    email: "21UCS045@lnmiit.ac.in",
-    password: "student123",
-    role: "passenger" as const,
-  },
-  driver: {
-    email: "21UME023@lnmiit.ac.in",
-    password: "driver123",
-    role: "driver" as const,
-  },
-};
-
 // Mock user authentication state
 const useAuth = () => {
   const [user, setUser] = useState<any>(null);
@@ -110,58 +92,38 @@ const useAuth = () => {
     // Show loading screen for 3 seconds
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
-      setLoading(false);
+      checkAuthStatus();
     }, 3000);
 
     return () => clearTimeout(timer);
   }, []);
 
-  const login = (
-    email: string,
-    password: string,
-    role: "driver" | "passenger"
-  ) => {
-    // Create user object based on credentials
-    const isDemo = email === "demo@lnmiit.ac.in";
-    const isStudent = email === "21UCS045@lnmiit.ac.in";
-    const isDriver = email === "21UME023@lnmiit.ac.in";
+  const checkAuthStatus = async () => {
+    try {
+      // Try to get current user if token exists
+      const currentUser = await authAPI.getCurrentUser();
+      setUser(currentUser);
+    } catch (error) {
+      // No valid token or user not found
+      console.log("No authenticated user found");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const userData = {
-      id: isDemo ? "demo-1" : isStudent ? "student-1" : "driver-1",
-      email,
-      role,
-      name: isDemo ? "Demo User" : isStudent ? "Arjun Sharma" : "Priya Gupta",
-      profilePicture: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-      phone: isDemo
-        ? "+91 99999 00000"
-        : isStudent
-        ? "+91 98765 43210"
-        : "+91 87654 32109",
-      branch: isStudent
-        ? "Computer Science"
-        : isDriver
-        ? "Mechanical Engineering"
-        : "Demo",
-      year: isStudent ? "3rd Year" : isDriver ? "4th Year" : "Demo",
-      rating: isDriver ? 4.8 : 4.5,
-      isVerified: true,
-      ridesCompleted: isDriver ? 125 : 87,
-      emergencyContacts: [
-        {
-          id: "1",
-          name: "Parent",
-          phone: "+91 99887 76655",
-          relation: "Father",
-        },
-      ],
-    };
-
+  const login = (userData: any) => {
     setUser(userData);
     return Promise.resolve();
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    try {
+      await authAPI.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setUser(null);
+    }
     return Promise.resolve();
   };
 
@@ -337,7 +299,7 @@ function AppContent() {
                     size={32}
                     source={{
                       uri:
-                        user.profilePicture ||
+                        user.profileImage ||
                         `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`,
                     }}
                     style={styles.avatar}

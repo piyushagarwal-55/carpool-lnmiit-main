@@ -5,8 +5,7 @@ import {
   AuthResponse,
 } from "../models/user";
 
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3001/api";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "";
 
 class AuthAPI {
   private async request<T>(
@@ -32,30 +31,35 @@ class AuthAPI {
     }
 
     const response = await fetch(url, config);
+    const data = await response.json();
 
     if (!response.ok) {
-      const error = await response
-        .json()
-        .catch(() => ({ message: "Network error" }));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      throw new Error(data.message || `HTTP ${response.status}`);
     }
 
-    return response.json();
+    return data;
   }
 
   private async getStoredToken(): Promise<string | null> {
     // In a real app, use AsyncStorage or SecureStore
-    return localStorage.getItem("auth_token");
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("auth_token");
+    }
+    return null;
   }
 
   private async storeToken(token: string): Promise<void> {
     // In a real app, use AsyncStorage or SecureStore
-    localStorage.setItem("auth_token", token);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("auth_token", token);
+    }
   }
 
   private async removeToken(): Promise<void> {
     // In a real app, use AsyncStorage or SecureStore
-    localStorage.removeItem("auth_token");
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem("auth_token");
+    }
   }
 
   async register(userData: CreateUserRequest): Promise<AuthResponse> {
@@ -64,7 +68,9 @@ class AuthAPI {
       body: JSON.stringify(userData),
     });
 
-    await this.storeToken(response.token);
+    if (response.token) {
+      await this.storeToken(response.token);
+    }
     return response;
   }
 
@@ -74,7 +80,9 @@ class AuthAPI {
       body: JSON.stringify(credentials),
     });
 
-    await this.storeToken(response.token);
+    if (response.token) {
+      await this.storeToken(response.token);
+    }
     return response;
   }
 
@@ -89,7 +97,8 @@ class AuthAPI {
   }
 
   async getCurrentUser(): Promise<User> {
-    return this.request<User>("/auth/me");
+    const response = await this.request<{ user: User }>("/auth/me");
+    return response.user;
   }
 
   async refreshToken(): Promise<AuthResponse> {
@@ -97,15 +106,18 @@ class AuthAPI {
       method: "POST",
     });
 
-    await this.storeToken(response.token);
+    if (response.token) {
+      await this.storeToken(response.token);
+    }
     return response;
   }
 
   async updateProfile(updates: Partial<User>): Promise<User> {
-    return this.request<User>("/auth/profile", {
+    const response = await this.request<{ user: User }>("/auth/profile", {
       method: "PUT",
       body: JSON.stringify(updates),
     });
+    return response.user;
   }
 
   async changePassword(

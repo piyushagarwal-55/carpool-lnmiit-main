@@ -35,15 +35,12 @@ import Animated, {
 import Button from "./ui/Button";
 import Input from "./ui/Input";
 import AnimatedBackground from "./AnimatedBackground";
+import { authAPI } from "../api/auth";
 
 const { width, height } = Dimensions.get("window");
 
 interface ModernAuthScreenProps {
-  onAuthenticated: (
-    email: string,
-    password: string,
-    role: "driver" | "passenger"
-  ) => void;
+  onAuthenticated: (user: any) => void;
   isDarkMode?: boolean;
 }
 
@@ -60,6 +57,8 @@ const ModernAuthScreen: React.FC<ModernAuthScreenProps> = ({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [branch, setBranch] = useState("");
+  const [year, setYear] = useState("");
   const [selectedRole, setSelectedRole] = useState<"driver" | "passenger">(
     "passenger"
   );
@@ -110,7 +109,8 @@ const ModernAuthScreen: React.FC<ModernAuthScreenProps> = ({
   const validateEmail = (email: string) => {
     // LNMIIT email format: YYUXXnnn@lnmiit.ac.in
     const emailRegex = /^\d{2}U[A-Z]{2}\d{3}@lnmiit\.ac\.in$/;
-    return emailRegex.test(email);
+    const isDemoEmail = email === 'demo@lnmiit.ac.in';
+    return isDemoEmail || emailRegex.test(email);
   };
 
   const validatePassword = (password: string) => {
@@ -128,13 +128,7 @@ const ModernAuthScreen: React.FC<ModernAuthScreenProps> = ({
       return;
     }
 
-    // Demo credentials check
-    const isDemoLogin =
-      (email === "demo@lnmiit.ac.in" && password === "demo123") ||
-      (email === "21UCS045@lnmiit.ac.in" && password === "student123") ||
-      (email === "21UME023@lnmiit.ac.in" && password === "driver123");
-
-    if (!isDemoLogin && !validateEmail(email)) {
+    if (!validateEmail(email)) {
       setEmailError(
         "Invalid LNMIIT email format. Example: 21UCS045@lnmiit.ac.in"
       );
@@ -147,7 +141,7 @@ const ModernAuthScreen: React.FC<ModernAuthScreenProps> = ({
       return;
     }
 
-    if (!isDemoLogin && !validatePassword(password)) {
+    if (!validatePassword(password)) {
       setPasswordError("Password must be at least 6 characters");
       return;
     }
@@ -167,23 +161,25 @@ const ModernAuthScreen: React.FC<ModernAuthScreenProps> = ({
     setLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Auto-assign role based on demo credentials
-      let role: "driver" | "passenger" = selectedRole;
-      if (email === "21UME023@lnmiit.ac.in") {
-        role = "driver";
-      } else if (
-        email === "21UCS045@lnmiit.ac.in" ||
-        email === "demo@lnmiit.ac.in"
-      ) {
-        role = "passenger";
+      if (isLogin) {
+        // Login
+        const response = await authAPI.login({ email, password });
+        onAuthenticated(response.user);
+      } else {
+        // Register
+        const response = await authAPI.register({
+          email,
+          password,
+          name,
+          role: selectedRole,
+          contactNumber: phone,
+          branch,
+          year,
+        });
+        onAuthenticated(response.user);
       }
-
-      onAuthenticated(email, password, role);
-    } catch (error) {
-      Alert.alert("Error", "Authentication failed. Please try again.");
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Authentication failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -310,14 +306,32 @@ const ModernAuthScreen: React.FC<ModernAuthScreenProps> = ({
               />
 
               {!isLogin && (
-                <Input
-                  label="Phone Number"
-                  value={phone}
-                  onChangeText={setPhone}
-                  leftIcon={<Phone size={20} color="#CCCCCC" />}
-                  placeholder="Enter your phone number"
-                  keyboardType="phone-pad"
-                />
+                <>
+                  <Input
+                    label="Phone Number"
+                    value={phone}
+                    onChangeText={setPhone}
+                    leftIcon={<Phone size={20} color="#CCCCCC" />}
+                    placeholder="Enter your phone number"
+                    keyboardType="phone-pad"
+                  />
+
+                  <Input
+                    label="Branch"
+                    value={branch}
+                    onChangeText={setBranch}
+                    leftIcon={<GraduationCap size={20} color="#CCCCCC" />}
+                    placeholder="e.g., Computer Science"
+                  />
+
+                  <Input
+                    label="Year"
+                    value={year}
+                    onChangeText={setYear}
+                    leftIcon={<GraduationCap size={20} color="#CCCCCC" />}
+                    placeholder="e.g., 3rd Year"
+                  />
+                </>
               )}
 
               <Input
